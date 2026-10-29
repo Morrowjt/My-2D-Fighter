@@ -1,1 +1,1 @@
-{"name":"my-2d-fighter","version":"0.1.0","private":true,"type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0","test":"node --test"},"devDependencies":{"vite":"7.1.12"}}
+{"name":"bad-company","version":"1.0.0","private":true,"type":"module","scripts":{"start":"python3 -m http.server 3000 --bind 0.0.0.0","test":"node --test --test-isolation=none tests/*.test.js","check":"node --check src/engine.js && node --check src/game.js && node --check src/render.js"}}
