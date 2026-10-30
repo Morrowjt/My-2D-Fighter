@@ -41,6 +41,8 @@ On a successful hit, **light → heavy → special** cancels recovery; blocked a
 
 Air lights kick downward past the fighter’s feet. Air heavies have a deeper downward hitbox, accelerate into a dive, hit harder, and cause knockdown. Both use different poses and hitboxes from ground attacks, and landing imposes recovery. Jump-ins can lead into grounded offense. Throws cannot catch airborne opponents; normal grabs cannot grab opponents already in hit-stun, while the metered sky slam can finish a confirmed combo.
 
+Normal throws leave the attacker recovering for 26 frames and the defender knocked down for 32, a six-frame advantage. After any knockdown, the defender has 12 frames of throw-only protection: a repeated grab whiffs and can be punished with a wake-up light or escaped with a buffered jump. This protection does not stop strikes; passive guarding still loses to a properly delayed command grab. The metered sky slam retains its longer knockdown.
+
 Guard reduces strike damage to 14% and prevents hit-confirm cancels; it does not stop throws. Hit-stop, sparks, recoil, knockback, knockdowns, combo counters, procedural sound, and modest impact shake communicate hits. Sky-slam impacts deliberately have a stronger shake. The camera pulls back to keep the aerial throw visible.
 
 VS CPU has 99-second rounds and ends at two wins. Tied rounds award neither side a win. **RESTART** resets the entire match. Training has an inactive opponent, unlimited time, full meter, and automatically restores a defeated dummy’s health. **FIGHTERS** returns to selection.
@@ -52,7 +54,7 @@ npm run check
 npm test
 ```
 
-The 18 deterministic tests exercise attack timing, one-hit behavior, whiff recovery, all four fighters’ cancel chains, buffering, guard chip damage, free grabs at zero meter, guarded throws, sky-slam heights/impact/damage/knockdown, dash invulnerability and vulnerable recovery, projectile interactions, aerial reach and diving attacks, meter costs, training behavior, movement, timer ties, and first-to-two round transitions. No dependency installation is necessary.
+The 21 deterministic tests exercise attack timing, one-hit behavior, whiff recovery, all four fighters’ cancel chains, buffering, guard chip damage, free grabs at zero meter, guarded throws, sky-slam heights/impact/damage/knockdown, dash invulnerability and vulnerable recovery, projectile interactions, aerial reach and diving attacks, meter costs, training behavior, movement, timer ties, first-to-two round transitions, and wake-up counterplay against repeated grabs in either player slot and at walls. No dependency installation is necessary.
 
 Browser verification was performed with system Chromium: selection, both throws, sky-slam framing, Blitz travel, aerial attacks, keyboard pause/resume, CPU combat, rematch/round transitions, sound, and touch layouts. Tests and current game state can be inspected in the developer console through `window.badCompanyAPI`; this is a local debugging aid, not a network service.
 

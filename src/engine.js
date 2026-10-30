@@ -1,5 +1,6 @@
 // All combat advances at 60 Hz. Rendering never determines hit timing.
 export const FLOOR=472, WIDTH=1100, STEP=1/60;
+const WAKE_THROW_PROTECTION=12; // Throw immunity only: wake-up strikes remain vulnerable.
 export const ROSTER=[
  {id:'super',name:'Super Fighting Man',short:'SUPER',role:'ALL-ROUNDER',color:'#c5f567',dark:'#325574',skin:'#e4ac80',speed:4.3,jump:13.5,hp:1000,tag:'A cape. A cause. A very good right hook.',special:'Super Shot',grab:'Heroic Toss'},
  {id:'grabby',name:'Grabby Guy',short:'GRABBY',role:'GRAPPLER',color:'#f3aa57',dark:'#683958',skin:'#c88c68',speed:3.1,jump:12,hp:1180,tag:'Personal space is a suggestion.',special:'Orbital Eviction',grab:'Rent Is Due'},
@@ -16,7 +17,7 @@ export const MOVES={
  sky:{startup:10,active:4,recovery:39,damage:260,reach:108,height:80,throw:true,cost:50},
  dash:{startup:6,active:19,recovery:28,damage:170,reach:110,height:85,stun:36,push:14,down:true,cost:50}
 };
-export function createFighter(id,x,side){const spec=ROSTER.find(p=>p.id===id)||ROSTER[0];return {...spec,x,y:FLOOR,vx:0,vy:0,facing:side,maxHp:spec.hp,meter:0,state:'idle',move:null,stun:0,down:0,invuln:false,guard:false,buffer:[],combo:0,comboDamage:0,comboLife:0,wins:0,aiWait:0,dash:0,landing:0};}
+export function createFighter(id,x,side){const spec=ROSTER.find(p=>p.id===id)||ROSTER[0];return {...spec,x,y:FLOOR,vx:0,vy:0,facing:side,maxHp:spec.hp,meter:0,state:'idle',move:null,stun:0,down:0,invuln:false,throwProtection:0,guard:false,buffer:[],combo:0,comboDamage:0,comboLife:0,wins:0,aiWait:0,dash:0,landing:0};}
 export function createGame(p1='super',p2='grabby',training=false,rng=Math.random){return {players:[createFighter(p1,310,1),createFighter(p2,790,-1)],training,rng,frame:0,time:99*60,round:1,phase:'intro',phaseTime:100,freeze:0,shake:0,particles:[],projectiles:[],events:[],throw:null,announcement:'ROUND 1',winner:null};}
 export function beginRound(g){g.phase='fight';g.phaseTime=0;g.announcement='';}
 export function input(g,index,action){const p=g.players[index];if(g.phase!=='fight')return;p.buffer.push({action,ttl:9});if(p.buffer.length>5)p.buffer.shift();}
@@ -65,7 +66,7 @@ function updateThrow(g){const t=g.throw,{a,b,sky}=t;t.t++;
  }else{const f=Math.min(1,t.t/34);a.x=t.baseX-30*a.facing;a.y=FLOOR;b.x=a.x+Math.cos(f*Math.PI)*65*a.facing;b.y=FLOOR-Math.sin(f*Math.PI)*157;}
  const impactFrame=sky?63:34;
  if(t.t===impactFrame){t.impact=true;b.hp=Math.max(0,b.hp-t.damage);b.y=FLOOR;b.vy=0;a.meter=Math.min(100,a.meter+10);b.meter=Math.min(100,b.meter+8);a.combo++;a.comboDamage+=t.damage;a.comboLife=100;g.freeze=sky?17:10;g.shake=sky?14:7;sparks(g,b.x,FLOOR-8,a.color,true);g.events.push({type:'slam',x:b.x,y:FLOOR,sky,damage:t.damage});}
- if(t.t>impactFrame+15){b.stun=0;b.down=55;b.state='down';a.state='idle';a.landing=10;g.throw=null;}
+ if(t.t>impactFrame+15){b.stun=0;b.down=sky?55:32;b.state='down';a.state='idle';a.landing=sky?10:26;g.throw=null;}
 }
 function cpu(g,p,b){
  if(g.training||g.phase!=='fight')return {};
@@ -95,7 +96,7 @@ function updateFighter(g,p,b,controls){
   if(active&&!move.spawned&&move.key==='special'&&(p.id==='super'||p.id==='witch')){move.spawned=true;g.projectiles.push({owner:p,x:p.x+p.facing*55,y:p.y-80,vx:p.facing*(p.id==='witch'?6:9),life:130,r:p.id==='witch'?25:19,data:m});}
   if(active&&!move.hit&&!(move.key==='special'&&(p.id==='super'||p.id==='witch'))){
    if(overlap(attackBox(p),hurtBox(b))&&!isInvulnerable(b)){
-    if(m.throw){if(!isAir(b)&&(move.key==='sky'||!b.stun)&&!b.move?.data.throw){move.hit=true;startThrow(g,p,b,move.key==='sky');return;}}
+    if(m.throw){if(!b.throwProtection&&!isAir(b)&&(move.key==='sky'||!b.stun)&&!b.move?.data.throw){move.hit=true;startThrow(g,p,b,move.key==='sky');return;}}
     else {const blocked=b.guard;if(hit(g,p,b,m)){move.hit=true;move.connected=!blocked;}}
    }
   }
@@ -113,6 +114,11 @@ export function tick(g,controls=[{},{}]){
  if(g.phase!=='fight')return;
  if(!g.training)g.time--;
  if(g.throw)updateThrow(g);else{
+ // Set wake-up protection before either fighter resolves a hit, regardless of slot.
+ for(const p of g.players){
+  if(p.throwProtection>0)p.throwProtection--;
+  if(p.down===1)p.throwProtection=WAKE_THROW_PROTECTION;
+ }
  const ai=cpu(g,g.players[1],g.players[0]);
  // Establish guards simultaneously before resolving either fighter's attacks.
  g.players.forEach((p,i)=>{const ctl=i===1&&!g.training?ai:controls[i]||{};p.guard=!!ctl.guard&&!isAir(p)&&!p.move&&!p.stun&&!p.down;});

@@ -24,3 +24,32 @@ test('buffer expires so stale whiff inputs do not fire later',()=>{const g=game(
 
 test('all four archetypes can confirm light → heavy → special at close range',()=>{for(const id of ['super','grabby','witch','blitz']){const g=game(id),a=g.players[0],b=g.players[1];b.x=475;input(g,0,'light');until(g,()=>a.combo===1);input(g,0,'heavy');until(g,()=>a.combo===2);assert.ok(b.stun>0);input(g,0,'special');until(g,()=>g.throw!==null||a.combo===3);if(id==='grabby'){assert.equal(g.throw.sky,true);until(g,()=>g.throw?.impact);assert.equal(a.combo,3);}else assert.equal(a.combo,3);}});
 test('free grab works at zero meter outside training and builds rather than spends meter',()=>{const g=game('grabby');g.training=false;const [a,b]=g.players;a.meter=0;b.aiWait=999;input(g,0,'grab');until(g,()=>g.throw?.impact,200,[{},{guard:true}]);assert.equal(b.hp,815);assert.equal(a.meter,10);});
+
+test('normal throw gives wake-up counterplay in either player slot, including at walls',()=>{
+ for(const slot of [0,1])for(const x of [110,550,990]){
+  const g=game(slot===0?'grabby':'super',slot===1?'grabby':'super'),a=g.players[slot],b=g.players[1-slot];
+  a.x=x;b.x=x+(x>900?-70:70);a.facing=b.x>a.x?1:-1;
+  input(g,slot,'grab');until(g,()=>!!g.throw);until(g,()=>!g.throw);
+  assert.equal(b.down,32);assert.equal(a.landing,26);
+  // Time the next grab to overlap the first frames of the defender's wake-up.
+  until(g,()=>b.down===7);input(g,slot,'grab');
+  until(g,()=>b.down===0);assert.equal(g.throw,null);assert.ok(b.throwProtection>0);
+  input(g,1-slot,'light');until(g,()=>a.hp<a.maxHp);
+  assert.equal(g.throw,null,'wake-up jab punishes the repeated grab');
+ }
+});
+test('buffered wake-up jump escapes a repeated command grab',()=>{
+ const g=game('grabby'),[a,b]=g.players;input(g,0,'grab');until(g,()=>!!g.throw);until(g,()=>!g.throw);
+ until(g,()=>b.down===7);input(g,0,'grab');input(g,1,'jump');
+ until(g,()=>b.down===0);step(g,5);
+ assert.ok(b.y<FLOOR-40);assert.equal(g.throw,null);assert.equal(b.hp,815);
+});
+test('wake-up protection stops both throws, expires, and leaves strikes effective',()=>{
+ for(const action of ['grab','special']){
+  const g=game('grabby'),[a,b]=g.players;b.throwProtection=20;input(g,0,action);step(g,14);
+  assert.equal(g.throw,null);assert.equal(b.hp,b.maxHp);assert.ok(a.move,'protected throw has whiff recovery');
+  until(g,()=>!a.move);assert.equal(b.throwProtection,0);a.x=b.x-70;a.facing=1;
+  input(g,0,action);until(g,()=>!!g.throw);assert.equal(g.throw.sky,action==='special');
+ }
+ const g=game(),b=g.players[1];b.throwProtection=20;input(g,0,'light');step(g,5);assert.equal(b.hp,956,'protection is not strike invulnerability');
+});
